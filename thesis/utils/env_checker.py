@@ -55,7 +55,8 @@ class RewardCheck:
                 self.history[agent]["dict"].append(dict_render)
                 if "get_action" in self.env.agent_behaviors[agent].__class__.__dict__:
                     action = self.env.agent_behaviors[agent].get_action(
-                        self.env.sim.get_observation()
+                        self.env.sim.get_observation(),
+                        time=self.env.run.get_state()[1]["model_time"],
                     )
                 else:
                     if not agent in manual_agents:

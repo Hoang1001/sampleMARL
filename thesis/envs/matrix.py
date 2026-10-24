@@ -201,7 +201,10 @@ class Matrix(BaseAlpyneZoo):
                             ZooAgent(
                                 str(i),
                                 self.pseudo_disp_cls(
-                                    self.agent_hive, 1, self.pseudo_dispatcher_distance, rule = self.pseudo_dispatcher_rule
+                                    self.agent_hive,
+                                    n_actions=1,
+                                    distance=self.pseudo_dispatcher_distance,
+                                    rule=self.pseudo_dispatcher_rule,
                                 ),
                                 False,
                             )
@@ -214,9 +217,9 @@ class Matrix(BaseAlpyneZoo):
                             "2001",
                             self.pseudo_disp_cls(
                                 self.agent_hive,
-                                self.fleetsize,
-                                self.pseudo_dispatcher_distance,
-                                rule = self.pseudo_dispatcher_rule
+                                n_actions=self.fleetsize,
+                                distance=self.pseudo_dispatcher_distance,
+                                rule=self.pseudo_dispatcher_rule,
                             ),
                             False,
                         )
@@ -306,8 +309,9 @@ class Matrix(BaseAlpyneZoo):
         config=None,
         seed=None,
         return_info=False,
-        options={},
+        options=None,
     ) -> "BaseAlpyneZoo.PyObservationType":
+        options = {} if options is None else options
         if not self.started:
             self._start()
         self.stepcounter = 0
@@ -334,8 +338,7 @@ class Matrix(BaseAlpyneZoo):
         # if self.pseudo_dispatcher and self.pseudo_routing:
         #     return_val = super().reset(self.config, seed, return_info, options)
         #     return self.observation_space("dummy").sample(), 0, False, {}
-        else:
-            return super().reset(self.config, seed, return_info, options, dont_collect = options.get("dont_collect", False))
+        return super().reset(self.config, seed, return_info, options, dont_collect = options.get("dont_collect", False))
 
     def action_space(self, agent) -> gym.spaces.Space:
         return super().action_space(agent)

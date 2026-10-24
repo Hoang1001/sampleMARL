@@ -142,7 +142,8 @@ def config_ma_policies(
 
     if all_ma:
         agv_model["model"]["custom_model_config"]["discrete_action_space"] = True
-        dispatcher_model["model"]["custom_model_config"]["discrete_action_space"] = True
+        if dispatcher_model is not None:
+            dispatcher_model["model"]["custom_model_config"]["discrete_action_space"] = True
 
     policies = dict()
 

@@ -187,7 +187,7 @@ class CleverMatrixDispatcher(ContextualAgent):
 
         self.part=MatrixPart()
         self.env_type="matrix"
-        self.assigned = None
+        self.assigned = {}
         self.rule = rule
         if self.rule not in ["random",  "shortest_quene"]: #"shortest_path",
             raise NotImplementedError
@@ -199,7 +199,15 @@ class CleverMatrixDispatcher(ContextualAgent):
         return False
 
     def get_action(self, alpyne_obs, time):
-        relevant_obs = alpyne_obs.obs[alpyne_obs.caller - 1000]
+        if alpyne_obs.caller == 2001:
+            agv_indices = range(int(self.hive.statistics["n_agv"]))
+        else:
+            agv_indices = [alpyne_obs.caller - 1000]
+        nodes = [self._choose_node(alpyne_obs, agv) for agv in agv_indices]
+        return self._make_action(nodes, alpyne_obs.caller)
+
+    def _choose_node(self, alpyne_obs, agv):
+        relevant_obs = alpyne_obs.obs[agv]
         part_obs = np.array(relevant_obs[18:])
         part_info = self.part_obs_to_dict(part_obs, self.env_type)
         part_info = self.part.translate(part_info) if part_info is not None else None
@@ -216,11 +224,14 @@ class CleverMatrixDispatcher(ContextualAgent):
 
                 for proc in processes:
                     stations.extend(self.part.proc_stat[proc])
+        if len(stations) == 0:
+            # nothing left to do for this part
+            return random.choice(self.part.stat_node["puffer"])
         if self.rule == "shortest_quene":
             other_agvs_target_coords:list = [obs[6:8] for obs in alpyne_obs.obs]
-            other_agvs_target_coords.pop(alpyne_obs.caller - 1000)
+            other_agvs_target_coords.pop(agv)
             other_agvs_current_coords:list = [obs[4:6] for obs in alpyne_obs.obs]
-            other_agvs_current_coords.pop(alpyne_obs.caller - 1000)
+            other_agvs_current_coords.pop(agv)
             other_agvs_target_ids = []
             for coord in other_agvs_target_coords + other_agvs_current_coords:
                 if coord[0]!=0 and coord[1] != 0:
@@ -236,16 +247,13 @@ class CleverMatrixDispatcher(ContextualAgent):
                     elif isinstance(target_id, list):
                         if id in target_id:
                             other_agvs_targets.append(target_name)
-            assert len(other_agvs_targets) == len(other_agvs_target_ids)
             weights = [other_agvs_targets.count(station) for station in stations]
-            choice = np.argmin(weights)
-            stations = [stations[choice]]
-            if len(stations)>1:
-                stations = [random.choice(stations)]
+            best = min(weights)
+            stations = [station for station, weight in zip(stations, weights) if weight == best]
                         
-        if self.assigned is None or not self.assigned in stations:
-                self.assigned = random.choice(stations)
-        return self._make_action([self.part.stat_node[self.assigned]], alpyne_obs.caller)
+        if self.assigned.get(agv) not in stations:
+            self.assigned[agv] = random.choice(stations)
+        return self.part.stat_node[self.assigned[agv]]
 
 
 class OnlyStandBehavior(ContextualAgent):
@@ -753,6 +761,17 @@ class MultiAgent(TrainingBehavior):
             int(agent),
         )
 
+
+def _part_for_env(hive: HiveContext):
+    """Station count tells the environments apart; only the Matrix has a part model."""
+    env_type = "matrix" if len(hive.stations) > 7 else "minimatrix"
+    if env_type != "matrix":
+        raise NotImplementedError(
+            "transform_dispatching_partobs is only implemented for the Matrix environment"
+        )
+    return env_type, MatrixPart()
+
+
 class MultiDispAgent(MultiAgent):
     def __init__(self, hive: HiveContext, max_fleetsize, start_of_nodes_in_reach, dispatching=False, all_ma=False, die_on_target=False) -> None:
         super().__init__(hive, max_fleetsize, start_of_nodes_in_reach, dispatching, all_ma, die_on_target)
@@ -762,8 +781,7 @@ class MultiDispAgent(MultiAgent):
     def convert_from_observation(self, alpyne_obs):
         seperate = False
         if self.part is None:
-            self.env_type = "matrix" if len(self.hive.stations) > 7 else "minimatrix"
-            self.part = MatrixPart() if self.env_type == "matrix" else None
+            self.env_type, self.part = _part_for_env(self.hive)
         _obs, _reward, _done, _info =  super().convert_from_observation(alpyne_obs)
         part_obs = _obs["agvs"][:, 18:]
 
@@ -805,8 +823,7 @@ class SingleDispAgent(SingleAgent):
 
     def convert_from_observation(self, alpyne_obs):
         if self.part is None:
-            self.env_type = "matrix" if len(self.hive.stations) > 7 else "minimatrix"
-            self.part = MatrixPart() if self.env_type == "matrix" else None
+            self.env_type, self.part = _part_for_env(self.hive)
         _obs, _reward, _done, _info =  super().convert_from_observation(alpyne_obs)
         part_obs = _obs["agvs"][:, 18:]
 
