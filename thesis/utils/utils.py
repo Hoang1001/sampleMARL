@@ -380,7 +380,7 @@ def setup_minimatrix_for_ray(path, unidirectional=False, port=None):
     env_fn = lambda config: Matrix(
         startport=51150 + config.worker_index if port is None else port,
         model_path=path,
-        max_seconds=60 * 60,
+        max_seconds=config.pop("max_seconds", 60 * 60),
         **config,
     )
     register_env("minimatrix", lambda config: PettingZooEnv(env_fn(config)))

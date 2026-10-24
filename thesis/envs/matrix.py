@@ -315,6 +315,7 @@ class Matrix(BaseAlpyneZoo):
         if not self.started:
             self._start()
         self.stepcounter = 0
+        self.warmup_statistics = None
         self.seed(seed=seed)
         if self.fleetsize_upper is not None:
             self.config.fleetsize = self.fleetsize = random.randint(self.fleetsize_under, self.fleetsize_upper)
@@ -450,11 +451,12 @@ class Matrix(BaseAlpyneZoo):
             if self.max_steps is not None
             else False
         )
-        time = 0 if self.max_seconds is None else self.run.get_state()[1]["model_time"]
+        need_time = self.max_seconds is not None or self.warmup_time > 0
+        time = self.run.get_state()[1]["model_time"] if need_time else 0
         terminal_max_seconds = (
             time >= self.max_seconds if self.max_seconds is not None else False
         )
-        if time < self.warmup_time:
+        if time < self.warmup_time and self.statistics is not None:
             self.warmup_statistics = self.statistics.copy()
         return terminal_max_steps or terminal_max_seconds
 

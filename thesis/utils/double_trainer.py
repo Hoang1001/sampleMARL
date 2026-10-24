@@ -63,6 +63,18 @@ parser.add_argument(
 )
 
 
+def merge_results(*results: dict) -> dict:
+    """Merge result dicts recursively, so equal top-level keys don't drop or clash."""
+    merged = {}
+    for result in results:
+        for key, value in result.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key] = merge_results(merged[key], value)
+            else:
+                merged[key] = value
+    return merged
+
+
 # Define new Algorithm with custom `training_step()` method (training workflow).
 class DoubleTrainer(Algorithm):
     @override(Algorithm)
@@ -158,7 +170,7 @@ class DoubleTrainer(Algorithm):
         else:
             ppo_train_results = {}
         # Combine results for PPO and DQN into one results dict.
-        results = dict(ppo_train_results, **dqn_train_results)
+        results = merge_results(ppo_train_results, dqn_train_results)
         return results
 
 
@@ -248,7 +260,7 @@ class TripleTrainer(Algorithm):
         ppo_train_results2 = self.ppo_sub_flow(ppo_batch2, "dispatcher2")
 
         # Combine results for PPO and DQN into one results dict.
-        results = dict(ppo_train_results1, **ppo_train_results2, **dqn_train_results)
+        results = merge_results(ppo_train_results1, ppo_train_results2, dqn_train_results)
         return results
 
     def ppo_sub_flow(self, ppo_train_batch, policy_name):

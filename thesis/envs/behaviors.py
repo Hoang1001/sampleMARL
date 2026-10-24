@@ -111,9 +111,9 @@ class ContextualAgent(ZooAgentBehavior):
             else:
                 part_info = {
                     "variant": ["vb_1", "vb_2"][list(part_obs[:2]).index(1)],
-                    "state": ["g01", "g12", "g2d", "finalState"][list(part_obs[2:8]).index(1)],
-                    "respots": [part_obs[8 + 2 * i] for i in range(2)],
-                    "nio": [part_obs[9 + 2 * i] for i in range(2)]
+                    "state": ["g01", "g12", "g2d", "finalState"][list(part_obs[2:6]).index(1)],
+                    "respots": [part_obs[6 + 2 * i] for i in range(2)],
+                    "nio": [part_obs[7 + 2 * i] for i in range(2)]
                 }   
         return part_info
 
@@ -302,11 +302,7 @@ class Arc:
         self.calc_free_time_windows()
 
     def time_window_intersect(self, window1, window2):
-        if window1[0] < window2[0] and not window1[1] <= window2[0]:
-            return True
-        if window1[1] > window2[1] and not window1[0] >= window2[1]:
-            return True
-        return False
+        return window1[0] < window2[1] and window2[0] < window1[1]
 
     def calc_free_time_windows(self):
         self.free_time_windows = []
